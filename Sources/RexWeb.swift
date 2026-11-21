@@ -612,6 +612,7 @@ final class Tracker {
   var grids: [String: Rex.Grid] = [:]
   var windowSession: [Int: String] = [:]
   var pendingPair: (Int, String)?
+  var focusedSession: String?
   var refreshing = Set<String>()
   var dirty = Set<String>()
   var eventsProcess: Process?
@@ -806,11 +807,10 @@ final class Tracker {
     let wins = Tracker.rexWindows().rex
     let live = Set(wins.map(\.number))
     windowSession = windowSession.filter { live.contains($0.key) }
+    focusedSession = (RexChrome.value("lastFocusedSession") as? Data)
+      .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["sessionID"] as? String
     let rexActive = NSWorkspace.shared.frontmostApplication?.bundleIdentifier?.hasPrefix("com.superlogical.rex") == true
-    guard rexActive, let front = wins.first,
-          let data = RexChrome.value("lastFocusedSession") as? Data,
-          let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          let session = o["sessionID"] as? String else { pendingPair = nil; return }
+    guard rexActive, let front = wins.first, let session = focusedSession else { pendingPair = nil; return }
     if let p = pendingPair, p.0 == front.number, p.1 == session {
       windowSession = windowSession.filter { $0.value != session }
       windowSession[front.number] = session
@@ -822,6 +822,8 @@ final class Tracker {
     let label = v["label"] as? String ?? ""
     if let w = rexWins.first(where: { !$0.name.isEmpty && ($0.name == label || $0.name.hasSuffix(" - \(label)")) }) { return w }
     if let w = rexWins.first(where: { windowSession[$0.number] == p.session }) { return w }
+    // An unlearned window can show any session, so guess only for the one Rex focused last.
+    guard p.session == focusedSession else { return nil }
     let free = rexWins.filter { windowSession[$0.number] == nil }
     if free.count == 1 { return free[0] }
     guard free.count > 1, let g = grids[p.id] else { return nil }
