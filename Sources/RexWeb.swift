@@ -250,7 +250,7 @@ final class Panel: NSObject, WKNavigationDelegate, WKUIDelegate, NSTextFieldDele
     window.hasShadow = false
     window.backgroundColor = .clear
     window.isOpaque = false
-    window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+    window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
 
     let root = NSView()
     root.wantsLayer = true
